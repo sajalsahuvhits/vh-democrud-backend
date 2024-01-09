@@ -238,7 +238,7 @@ export const addEditGame = async (req, res) => {
 export const getGame = async (req, res) => {
   try {
     const getGame = await Game.find({ isDeleted: false })
-      .populate("genre")
+      .populate("genre platform")
       .sort({ createdAt: -1 });
     if (getGame) {
       return res.status(200).json({
@@ -301,14 +301,14 @@ export const deleteGame = async (req, res) => {
 
 export const getGameById = async (req, res) => {
   try {
-    const findGenre = await Game.findOne({
+    const findGame = await Game.findOne({
       _id: req.params.id,
       isDeleted: false,
-    }).populate("genre");
-    if (findGenre) {
+    }).populate("genre platform");
+    if (findGame) {
       res.status(200).json({
         status: StatusCodes.OK,
-        data: findGenre,
+        data: findGame,
         message: ResponseMessage.GAME_FETCHED,
       });
     } else {

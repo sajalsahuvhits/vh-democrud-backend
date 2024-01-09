@@ -4,6 +4,7 @@ import { auth } from "../middleware/Auth.js";
 import { addEditGame, addEditGenre, deleteGame, deleteGenre, getGame, getGameById, getGenre, getGenreById } from "../controller/admin/GameController.js";
 import Uploads from "../middleware/ImageUpload.js";
 import { addEditPlatform, deletePlatform, getPlatform, getPlatformById } from "../controller/admin/PlatformController.js";
+import { addEditNews } from "../controller/admin/NewsController.js";
 
 const AdminRouter = Router();
 
@@ -37,5 +38,7 @@ AdminRouter.route("/admin/delete-platform").post(auth, deletePlatform);
 AdminRouter.route("/admin/get-platform-by-id/:id").get(auth, getPlatformById);
 
 // news routes
+AdminRouter.route("/admin/add-edit-news").post(auth, Uploads,addEditNews);
+AdminRouter.route("/admin/get-news").get(auth, getPlatform);
 
 export { AdminRouter };

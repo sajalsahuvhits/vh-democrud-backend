@@ -55,5 +55,12 @@ export const ResponseMessage = {
     PLATFORM_FETCHED: "Platform fetched.",
     PLATFORM_NOT_FOUND: "Platform not found!",
     PLATFORM_DELETED: "Platform deleted.",
-    PLATFORM_NOT_DELETED: "Platform not deleted!"
+    PLATFORM_NOT_DELETED: "Platform not deleted!",
+    NEWS_UPDATED: "News updated.",
+    NEWS_NOT_UPDATED: "News not updated!",
+    NEWS_ALREADY_CREATED: "News already created!",
+    NEWS_CREATED: "News created.",
+    NEWS_NOT_CREATED: "News not created!",
+    NEWS_FETCHED: "News fetched.",
+    NEWS_NOT_FOUND: "News not found!"
 }

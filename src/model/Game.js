@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Genre } from "./Genre.js";
+import { Platform } from "./Platform.js";
 const GameSchema = mongoose.Schema(
   {
     title: {
@@ -17,6 +18,11 @@ const GameSchema = mongoose.Schema(
     genre: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: Genre,
+      required: false,
+    }],
+    platform: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: Platform,
       required: false,
     }],
     isDeleted: {
