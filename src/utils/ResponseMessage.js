@@ -62,5 +62,7 @@ export const ResponseMessage = {
     NEWS_CREATED: "News created.",
     NEWS_NOT_CREATED: "News not created!",
     NEWS_FETCHED: "News fetched.",
-    NEWS_NOT_FOUND: "News not found!"
+    NEWS_NOT_FOUND: "News not found!",
+    NEWS_DELETED: "News deleted.",
+    NEWS_NOT_DELETED: "News not deleted!"
 }

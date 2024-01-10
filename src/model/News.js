@@ -21,11 +21,11 @@ const NewsSchema = new mongoose.Schema(
             required: false,
             ref: Admin
         },
-        gameId: [{
+        gameId: {
             type: mongoose.Schema.Types.ObjectId,
             required: false,
             ref: Game
-        }],
+        },
         isDeleted: {
             type: Boolean,
             default: false,

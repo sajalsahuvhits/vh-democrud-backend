@@ -164,6 +164,8 @@ export const addEditGame = async (req, res) => {
     let findImage = await Game.findOne({ _id: req.body.id });
     let prevImg = findImage?.image;
     req.body.image = req.fileurl ? req.fileurl : prevImg;
+    req.body.genre = JSON.parse(req.body.genre)
+    req.body.platform = JSON.parse(req.body.platform)
     if (req.body.id) {
       const checkGame = await Game.find({
         _id: { $ne: req.body.id },
