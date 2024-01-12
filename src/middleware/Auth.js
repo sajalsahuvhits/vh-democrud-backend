@@ -53,6 +53,7 @@ export const auth = async (req, res, next) => {
       }
       // next();
     } catch (err) {
+      console.log(err.message);
       return res.status(500).json({
         status: StatusCodes.INTERNAL_SERVER_ERROR,
         message: err.message,

@@ -6,6 +6,7 @@ import {
   encryptPassword,
   generateOtp,
   genrateToken,
+  sendResponse,
 } from "../../services/CommonServices.js";
 import { User } from "../../model/User.js";
 import { transport } from "../../config/Email.config.js";
@@ -14,43 +15,36 @@ export const adminLogin = async (req, res) => {
   try {
     let { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({
-        status: StatusCodes.BAD_REQUEST,
-        message: ResponseMessage.ALL_FIELDS_REQUIRED,
-        data: [],
-      });
+      return sendResponse(res, 400, ResponseMessage.ALL_FIELDS_REQUIRED);
     }
-    const findAdmin = await Admin.findOne({ email }).select("+password");
+    const findAdmin = await Admin.findOne({ email }).select("+password -otp");
     if (findAdmin) {
       const passwordMatch = await bcrypt.compare(password, findAdmin.password);
       if (passwordMatch) {
-        const payload = {
-          admin: {
-            id: findAdmin._id,
-          },
-        };
+        const payload = { admin: { id: findAdmin._id } };
         const token = genrateToken({
           payload,
           ExpiratioTime: "60d",
         });
-        res.status(200).json({
-          status: StatusCodes.OK,
-          message: ResponseMessage.ADMIN_LOGGED_IN,
-          data: { user: findAdmin, token: token },
+        let user = JSON.parse(JSON.stringify(findAdmin));
+        delete user.password;
+        sendResponse(res, StatusCodes.OK, ResponseMessage.ADMIN_LOGGED_IN, {
+          user,
+          token,
         });
       } else {
-        res.status(401).json({
-          status: StatusCodes.UNAUTHORIZED,
-          message: ResponseMessage.INVALID_PASSWORD,
-          data: [],
-        });
+        sendResponse(
+          res,
+          StatusCodes.UNAUTHORIZED,
+          ResponseMessage.INVALID_PASSWORD
+        );
       }
     } else {
-      res.status(400).json({
-        status: StatusCodes.BAD_REQUEST,
-        message: ResponseMessage.ADMIN_NOT_FOUND,
-        data: [],
-      });
+      sendResponse(
+        res,
+        StatusCodes.BAD_REQUEST,
+        ResponseMessage.ADMIN_NOT_FOUND
+      );
     }
   } catch (err) {
     res.status(500).json({
@@ -74,19 +68,21 @@ export const userActiveDeactive = async (req, res) => {
     //   "Account status changed",
     //   `Account ${updatedUser.isActive ? "activated" : "deactivated"}`
     // );
-    res.status(200).json({
-      status: StatusCodes.OK,
-      data: updatedUser,
-      message: updatedUser.isActive
+    sendResponse(
+      res,
+      StatusCodes.OK,
+      updatedUser.isActive
         ? ResponseMessage.USER_ACTIVATED
         : ResponseMessage.USER_IN_ACTIVATED,
-    });
+      updatedUser
+    );
   } catch (error) {
-    return res.status(500).json({
-      status: StatusCodes.INTERNAL_SERVER_ERROR,
-      message: ResponseMessage.INTERNAL_SERVER_ERROR,
-      data: [error.message],
-    });
+    sendResponse(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      ResponseMessage.INTERNAL_SERVER_ERROR,
+      [error.message]
+    );
   }
 };
 
@@ -94,11 +90,11 @@ export const changePassword = async (req, res) => {
   try {
     let { newPassword, oldPassword } = req.body;
     if (!oldPassword || !newPassword) {
-      return res.status(400).json({
-        status: StatusCodes.BAD_REQUEST,
-        message: "Old and new Password required!",
-        data: [],
-      });
+      return sendResponse(
+        res,
+        StatusCodes.BAD_REQUEST,
+        ResponseMessage.OLD_NEW_PASSWORD_REQUIRED
+      );
     }
     const findPassword = await Admin.findById(req.admin).select("+password");
     if (findPassword) {
@@ -214,52 +210,52 @@ export const forgotPassword = async (req, res) => {
     let admin = await Admin.findOne({ email });
     if (admin) {
       const updateOtp = await Admin.findOneAndUpdate(
-        {
-          email,
-        },
-        {
-          $set: {
-            otp: generateOtp(),
-          },
-        },
+        { email },
+        { $set: { otp: generateOtp() } },
         { new: true }
       );
       if (!updateOtp) {
-        return res.json(error);
+        return sendResponse(
+          res,
+          StatusCodes.BAD_REQUEST,
+          ResponseMessage.SOMETHING_WENT_WRONG
+        );
       } else {
         let mailInfo = `OTP: ${updateOtp.otp}`;
-        transport(admin.email, "Forgot Password", mailInfo)
-          .then((data) => {
-            if (data == 0) {
-              return res.status(400).json({
-                status: StatusCodes.BAD_REQUEST,
-                message: ResponseMessage.SOMETHING_WENT_WRONG,
-                data: [],
-              });
-            } else {
-              return res.status(200).json({
-                status: StatusCodes.OK,
-                message: ResponseMessage.RESET_PASSWORD_MAIL,
-                data: updateOtp,
-              });
-            }
-          })
-          .catch((error) => {
-            return res.status(500).json({
-              status: StatusCodes.INTERNAL_SERVER_ERROR,
-              message: ResponseMessage.INTERNAL_SERVER_ERROR,
-              data: error,
-            });
+        const emailResp = await transport(
+          admin.email,
+          "Forgot Password",
+          mailInfo
+        );
+
+        if (emailResp) {
+          const payload = { admin: { id: updateOtp._id } };
+          const token = genrateToken({
+            payload,
+            ExpiratioTime: "1d",
           });
+          sendResponse(
+            res,
+            StatusCodes.OK,
+            ResponseMessage.RESET_PASSWORD_MAIL,
+            { token }
+          );
+        } else {
+          sendResponse(
+            res,
+            StatusCodes.BAD_REQUEST,
+            ResponseMessage.SOMETHING_WENT_WRONG
+          );
+        }
       }
     } else {
-      return res.status(400).json({
-        status: StatusCodes.BAD_REQUEST,
-        message: ResponseMessage.ADMIN_NOT_FOUND,
-      });
+      sendResponse(
+        res,
+        StatusCodes.BAD_REQUEST,
+        ResponseMessage.ADMIN_NOT_FOUND
+      );
     }
   } catch (err) {
-    console.log(err);
     return res.status(500).json({
       status: StatusCodes.INTERNAL_SERVER_ERROR,
       message: ResponseMessage.INTERNAL_SERVER_ERROR,
@@ -270,7 +266,8 @@ export const forgotPassword = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    let { otp, id } = req.body;
+    let id = req.admin;
+    let { otp } = req.body;
     let admin = await Admin.findById({ _id: id });
     if (admin.otp != otp) {
       return res.status(400).json({
@@ -279,9 +276,6 @@ export const verifyOtp = async (req, res) => {
         daa: [],
       });
     } else {
-      // admin.otp = null;
-      // admin.isVerified = true;
-      // await admin.save();
       await Admin.findByIdAndUpdate(
         { _id: id },
         { $set: { otp: null, isVerified: true } },
@@ -304,7 +298,8 @@ export const verifyOtp = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    let { newPassword, confirmPassword, adminId } = req.body;
+    let adminId = req.admin;
+    let { newPassword, confirmPassword } = req.body;
     let exist = await Admin.findOne({ _id: adminId }).select("+password");
     if (exist) {
       const validPassword = await bcrypt.compare(newPassword, exist.password);

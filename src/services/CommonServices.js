@@ -21,3 +21,6 @@ export const encryptPassword = async (password) => {
   return encreptPassword;
 }
 
+export const sendResponse = (res, status, message, data = []) => {
+  res.status(status).json({status, message, data});
+}

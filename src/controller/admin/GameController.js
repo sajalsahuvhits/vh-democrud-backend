@@ -164,8 +164,8 @@ export const addEditGame = async (req, res) => {
     let findImage = await Game.findOne({ _id: req.body.id });
     let prevImg = findImage?.image;
     req.body.image = req.fileurl ? req.fileurl : prevImg;
-    req.body.genre = JSON.parse(req.body.genre)
-    req.body.platform = JSON.parse(req.body.platform)
+    req.body.genre = JSON.parse(req.body.genre);
+    req.body.platform = JSON.parse(req.body.platform);
     if (req.body.id) {
       const checkGame = await Game.find({
         _id: { $ne: req.body.id },
@@ -318,6 +318,36 @@ export const getGameById = async (req, res) => {
         status: StatusCodes.OK,
         data: [],
         message: ResponseMessage.GAME_NOT_FOUND,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      status: StatusCodes.INTERNAL_SERVER_ERROR,
+      message: ResponseMessage.INTERNAL_SERVER_ERROR,
+      data: [error.message],
+    });
+  }
+};
+
+export const getNewGames = async (req, res) => {
+  try {
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate()-5);
+    const getGame = await Game.find({
+      isDeleted: false,
+      createdAt: { $gte: startDate },
+    }).populate("genre platform");
+    if (getGame) {
+      return res.status(200).json({
+        status: StatusCodes.OK,
+        message: ResponseMessage.GAME_FETCHED,
+        data: getGame,
+      });
+    } else {
+      return res.status(400).json({
+        status: StatusCodes.BAD_REQUEST,
+        message: ResponseMessage.GAME_NOT_FOUND,
+        data: [],
       });
     }
   } catch (error) {

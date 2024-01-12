@@ -59,7 +59,7 @@ export const userLogin = async (req, res) => {
         data: [],
       });
     }
-    const findUser = await User.findOne({ email }).select("+password");
+    const findUser = await User.findOne({ email }).select("+password -otp");
     if (findUser) {
       if (findUser.isVerified == true) {
         if (findUser.isActive == true) {
@@ -68,19 +68,17 @@ export const userLogin = async (req, res) => {
             findUser.password
           );
           if (passwordMatch) {
-            const payload = {
-              user: {
-                id: findUser._id,
-              },
-            };
+            const payload = { user: { id: findUser._id } };
             const token = genrateToken({
               payload,
               ExpiratioTime: "7d",
             });
+            let user = JSON.parse(JSON.stringify(findUser))
+            delete user.password;
             res.status(200).json({
               status: StatusCodes.OK,
               message: ResponseMessage.USER_LOGGED_IN,
-              data: { user: findUser, token: token },
+              data: { user, token: token },
             });
           } else {
             res.status(401).json({
@@ -121,12 +119,12 @@ export const userLogin = async (req, res) => {
 export const changePassword = async (req, res) => {
   try {
     let { newPassword, oldPassword } = req.body;
-    if(!oldPassword || !newPassword){
-        return res.status(400).json({
-            status: StatusCodes.BAD_REQUEST,
-            message: "Old and new Password required!",
-            data: []
-        })
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        status: StatusCodes.BAD_REQUEST,
+        message: "Old and new Password required!",
+        data: [],
+      });
     }
     const findPassword = await User.findById(req.user).select("+password");
     if (findPassword) {
@@ -196,20 +194,15 @@ export const forgotPassword = async (req, res) => {
     let user = await User.findOne({ email });
     if (user) {
       const updateOtp = await User.findOneAndUpdate(
-        {
-          email,
-        },
-        {
-          $set: {
-            otp: generateOtp(),
-          },
-        },
+        { email },
+        { $set: { otp: generateOtp() } },
         { new: true }
       );
       if (!updateOtp) {
         return res.json(error);
       } else {
         let mailInfo = `OTP: ${updateOtp.otp}`;
+
         transport(user.email, "Forgot Password", mailInfo)
           .then((data) => {
             if (data == 0) {
@@ -219,10 +212,15 @@ export const forgotPassword = async (req, res) => {
                 data: [],
               });
             } else {
+              const payload = { user: { id: updateOtp._id } };
+              const token = genrateToken({
+                payload,
+                ExpiratioTime: "1d",
+              });
               return res.status(200).json({
                 status: StatusCodes.OK,
                 message: ResponseMessage.RESET_PASSWORD_MAIL,
-                data: updateOtp,
+                data: { token },
               });
             }
           })
@@ -252,7 +250,8 @@ export const forgotPassword = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    let { otp, id } = req.body;
+    let id = req.user;
+    let { otp } = req.body;
     let user = await User.findById({ _id: id });
     if (user.otp != otp) {
       return res.status(400).json({
@@ -283,15 +282,16 @@ export const verifyOtp = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    let { newPassword, confirmPassword, userId } = req.body;
-    let exist = await User.findOne({ _id: userId }).select("+password");
+    let id = req.user;
+    let { newPassword, confirmPassword } = req.body;
+    let exist = await User.findOne({ _id: id }).select("+password");
     if (exist) {
       const validPassword = await bcrypt.compare(newPassword, exist.password);
       if (!validPassword) {
         if (newPassword == confirmPassword) {
           const password = await encryptPassword(newPassword);
           let resetPassword = await User.findByIdAndUpdate(
-            { _id: userId },
+            { _id: id },
             { $set: { password: password } },
             { new: true }
           );

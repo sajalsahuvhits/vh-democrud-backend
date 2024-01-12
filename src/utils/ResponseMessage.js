@@ -64,5 +64,6 @@ export const ResponseMessage = {
     NEWS_FETCHED: "News fetched.",
     NEWS_NOT_FOUND: "News not found!",
     NEWS_DELETED: "News deleted.",
-    NEWS_NOT_DELETED: "News not deleted!"
+    NEWS_NOT_DELETED: "News not deleted!",
+    OLD_NEW_PASSWORD_REQUIRED: "Old and new Password required!",
 }
